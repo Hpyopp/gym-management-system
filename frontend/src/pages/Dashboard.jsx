@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -15,32 +15,39 @@ const Dashboard = () => {
         setData(res.data);
         setLoading(false);
       } catch (error) {
-        console.error(error);
+        console.error("Fetch Error:", error);
         setLoading(false);
       }
     };
-    fetchData();
+    if (userId) {
+      fetchData();
+    }
   }, [userId]);
 
   if (loading) return <div className="container"><h2 className="title">Extracting metrics...</h2></div>;
-  if (!data) return <div className="container"><h2 className="title" style={{color: 'var(--danger)'}}>Data retrieval failed.</h2></div>;
+  
+  // Safe check for data and assignedPlan
+  if (!data || !data.assignedPlan) return (
+    <div className="container">
+      <h2 className="title" style={{color: 'var(--danger)'}}>Protocol Data Inaccessible.</h2>
+      <button onClick={() => navigate('/')} className="btn btn-primary">Return to Login</button>
+    </div>
+  );
 
   return (
     <div className="container">
       <header className="header">
-        <h1 className="title">Subject Protocol: <span>{data.assignedPlan.planName}</span></h1>
+        <h1 className="title">Subject Protocol: <span>{data.assignedPlan?.planName || 'Standard'}</span></h1>
         <button onClick={() => navigate('/')} className="btn btn-danger">Disconnect</button>
       </header>
 
-      {/* --- FIX: Notice Board Visibility Corrected --- */}
       {data.notifications && data.notifications.length > 0 && (
         <div style={{ marginBottom: '2rem' }}>
           {data.notifications.map((notif, index) => (
             <div key={index} className={`alert ${notif.type === 'Holiday' ? 'alert-warning' : 'alert-info'}`}>
               <strong>{notif.type}:</strong> {notif.message}
-              {/* Yahan color change kiya hai taaki padha ja sake */}
               <div style={{ fontSize: '0.8rem', marginTop: '0.5rem', opacity: 0.9, fontStyle: 'italic' }}>
-                Recorded: {new Date(notif.date).toDateString()}
+                Recorded: {notif.date ? new Date(notif.date).toDateString() : 'N/A'}
               </div>
             </div>
           ))}
@@ -81,21 +88,21 @@ const Dashboard = () => {
           <div style={{ marginBottom: '2rem' }}>
             <div className="data-row">
               <span className="badge badge-primary">0800 HRS</span> 
-              <span style={{ textAlign: 'right' }}>{data.assignedPlan.morningDiet}</span>
+              <span style={{ textAlign: 'right' }}>{data.assignedPlan?.morningDiet}</span>
             </div>
             <div className="data-row">
               <span className="badge badge-primary">1300 HRS</span> 
-              <span style={{ textAlign: 'right' }}>{data.assignedPlan.lunchDiet}</span>
+              <span style={{ textAlign: 'right' }}>{data.assignedPlan?.lunchDiet}</span>
             </div>
             <div className="data-row" style={{ borderBottom: 'none' }}>
               <span className="badge badge-primary">2000 HRS</span> 
-              <span style={{ textAlign: 'right' }}>{data.assignedPlan.dinnerDiet}</span>
+              <span style={{ textAlign: 'right' }}>{data.assignedPlan?.dinnerDiet}</span>
             </div>
           </div>
 
           <div className="card-header">Physical Exertion Protocol</div>
           <div style={{ padding: '1rem', background: 'var(--bg-dark)', borderRadius: '8px', color: 'var(--text-muted)' }}>
-            {data.assignedPlan.workoutRoutine}
+            {data.assignedPlan?.workoutRoutine}
           </div>
         </div>
       </div>
