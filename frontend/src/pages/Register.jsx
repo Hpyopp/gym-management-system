@@ -13,7 +13,7 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/register', formData);
+      const res = await axios.post('https://gym-management-system-ngbu.onrender.com/api/auth/register', formData);
       navigate(`/dashboard/${res.data._id}`);
     } catch (error) {
       alert(error.response?.data?.message || 'Error occurred');

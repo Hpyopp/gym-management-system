@@ -10,7 +10,7 @@ const Admin = () => {
   useEffect(() => {
     const fetchMembers = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/api/admin/members');
+        axios.get('https://gym-management-system-ngbu.onrender.com/api/admin/members');
         setMembers(res.data);
       } catch (error) {
         console.error("Fetch error:", error);
@@ -22,7 +22,7 @@ const Admin = () => {
   const sendBroadcast = async (type) => {
     if (!msg) return alert("Message cannot be empty.");
     try {
-      const res = await axios.post('http://localhost:5000/api/admin/broadcast', { message: msg, type: type });
+      axios.post('https://gym-management-system-ngbu.onrender.com/api/admin/broadcast', { message: msg, type: type });
       if(res.data.success) { alert(`${type} Transmitted Successfully.`); setMsg(''); }
     } catch (error) {
       alert("System connection failed.");

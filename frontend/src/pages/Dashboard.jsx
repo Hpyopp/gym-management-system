@@ -11,7 +11,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/plans/my-plan/${userId}`);
+        const res = await axios.get(`https://gym-management-system-ngbu.onrender.com/api/plans/my-plan/${userId}`);
         setData(res.data);
         setLoading(false);
       } catch (error) {

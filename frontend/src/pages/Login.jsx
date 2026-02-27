@@ -9,7 +9,7 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/login', form);
+      const res = await axios.post('https://gym-management-system-ngbu.onrender.com/api/auth/login', form);
       if (res.data.role === 'admin') {
         navigate('/admin');
       } else {
