@@ -11,6 +11,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // LIVE URL - CHANGE IF NEEDED
         const res = await axios.get(`https://gym-management-system-ngbu.onrender.com/api/plans/my-plan/${userId}`);
         setData(res.data);
         setLoading(false);
@@ -34,7 +35,15 @@ const Dashboard = () => {
   return (
     <div className="container">
       <header className="header">
-        <h1 className="title">Subject Protocol: <span>{data.assignedPlan?.planName || 'Plan'}</span></h1>
+         {/* --- LOGO ADDED HERE --- */}
+        <div className="branding-box">
+            <img 
+                src="https://cdn-icons-png.flaticon.com/512/70/70388.png" 
+                alt="Gym Logo" 
+                className="gym-logo"
+            />
+            <h1 className="title">Subject Protocol: <span>{data.assignedPlan?.planName || 'Plan'}</span></h1>
+        </div>
         <button onClick={() => navigate('/')} className="btn btn-danger">Disconnect</button>
       </header>
 

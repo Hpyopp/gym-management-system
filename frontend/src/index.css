@@ -18,6 +18,28 @@ body { background-color: var(--bg-dark); color: var(--text-main); line-height: 1
 
 .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
+/* --- Existing .header code ends here --- */
+
+/* --- NEW LOGO STYLES --- */
+.branding-box {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.gym-logo {
+  height: 50px; /* Logo ka size adjust karne ke liye */
+  width: auto;
+}
+
+/* Mobile adjustment */
+@media screen and (max-width: 768px) {
+  .header { flex-direction: row; flex-wrap: wrap; } /* Header layout fix for mobile */
+  .branding-box { flex-grow: 1; }
+  .gym-logo { height: 40px; }
+  .title { font-size: 1.2rem; }
+  .btn { margin-top: 1rem; width: auto; flex-grow: 1; } /* Button fix on mobile */
+}
 .title { font-size: 1.8rem; font-weight: 700; color: var(--text-main); }
 .title span { color: var(--accent-primary); }
 

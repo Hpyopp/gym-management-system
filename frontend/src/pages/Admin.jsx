@@ -10,7 +10,8 @@ const Admin = () => {
   useEffect(() => {
     const fetchMembers = async () => {
       try {
-        axios.get('https://gym-management-system-ngbu.onrender.com/api/admin/members');
+        // LIVE URL - CHANGE IF NEEDED
+        const res = await axios.get('https://gym-management-system-ngbu.onrender.com/api/admin/members');
         setMembers(res.data);
       } catch (error) {
         console.error("Fetch error:", error);
@@ -22,8 +23,10 @@ const Admin = () => {
   const sendBroadcast = async (type) => {
     if (!msg) return alert("Message cannot be empty.");
     try {
-      axios.post('https://gym-management-system-ngbu.onrender.com/api/admin/broadcast', { message: msg, type: type });
-      if(res.data.success) { alert(`${type} Transmitted Successfully.`); setMsg(''); }
+      // LIVE URL - CHANGE IF NEEDED
+      await axios.post('https://gym-management-system-ngbu.onrender.com/api/admin/broadcast', { message: msg, type: type });
+      alert(`${type} Transmitted Successfully.`); 
+      setMsg('');
     } catch (error) {
       alert("System connection failed.");
     }
@@ -32,7 +35,15 @@ const Admin = () => {
   return (
     <div className="container">
       <header className="header">
-        <h1 className="title">System <span>Admin</span></h1>
+        {/* --- LOGO ADDED HERE --- */}
+        <div className="branding-box">
+          <img 
+            src="https://cdn-icons-png.flaticon.com/512/70/70388.png" 
+            alt="Gym Logo" 
+            className="gym-logo"
+          />
+          <h1 className="title">System <span>Admin</span></h1>
+        </div>
         <button onClick={() => navigate('/')} className="btn btn-danger">Disconnect</button>
       </header>
       
@@ -52,7 +63,7 @@ const Admin = () => {
 
       <div className="card">
         <div className="card-header">Subject Database ({members.length} Active)</div>
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-responsive">
           <table>
             <thead>
               <tr>
