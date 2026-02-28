@@ -19,17 +19,14 @@ const Dashboard = () => {
         setLoading(false);
       }
     };
-    if (userId) {
-      fetchData();
-    }
+    if (userId) fetchData();
   }, [userId]);
 
   if (loading) return <div className="container"><h2 className="title">Extracting metrics...</h2></div>;
   
-  // Safe check for data and assignedPlan
   if (!data || !data.assignedPlan) return (
     <div className="container">
-      <h2 className="title" style={{color: 'var(--danger)'}}>Protocol Data Inaccessible.</h2>
+      <h2 className="title" style={{color: 'var(--danger)'}}>Data retrieval failed.</h2>
       <button onClick={() => navigate('/')} className="btn btn-primary">Return to Login</button>
     </div>
   );
@@ -37,11 +34,11 @@ const Dashboard = () => {
   return (
     <div className="container">
       <header className="header">
-        <h1 className="title">Subject Protocol: <span>{data.assignedPlan?.planName || 'Standard'}</span></h1>
+        <h1 className="title">Subject Protocol: <span>{data.assignedPlan?.planName || 'Plan'}</span></h1>
         <button onClick={() => navigate('/')} className="btn btn-danger">Disconnect</button>
       </header>
 
-      {data.notifications && data.notifications.length > 0 && (
+      {data.notifications?.length > 0 && (
         <div style={{ marginBottom: '2rem' }}>
           {data.notifications.map((notif, index) => (
             <div key={index} className={`alert ${notif.type === 'Holiday' ? 'alert-warning' : 'alert-info'}`}>
