@@ -35,7 +35,7 @@ const Admin = () => {
       <header className="header">
         <div className="branding-box">
           <img 
-            src="/logo.jpg" 
+            src="/logo.jpeg"
             alt="Gym Logo" 
             className="gym-logo"
             style={{ borderRadius: '8px' }}
