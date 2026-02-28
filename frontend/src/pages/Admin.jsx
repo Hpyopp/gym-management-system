@@ -10,7 +10,6 @@ const Admin = () => {
   useEffect(() => {
     const fetchMembers = async () => {
       try {
-        // LIVE URL - CHANGE IF NEEDED
         const res = await axios.get('https://gym-management-system-ngbu.onrender.com/api/admin/members');
         setMembers(res.data);
       } catch (error) {
@@ -23,7 +22,6 @@ const Admin = () => {
   const sendBroadcast = async (type) => {
     if (!msg) return alert("Message cannot be empty.");
     try {
-      // LIVE URL - CHANGE IF NEEDED
       await axios.post('https://gym-management-system-ngbu.onrender.com/api/admin/broadcast', { message: msg, type: type });
       alert(`${type} Transmitted Successfully.`); 
       setMsg('');
@@ -35,12 +33,12 @@ const Admin = () => {
   return (
     <div className="container">
       <header className="header">
-        {/* --- LOGO ADDED HERE --- */}
         <div className="branding-box">
           <img 
-            src="https://cdn-icons-png.flaticon.com/512/70/70388.png" 
+            src="/logo.jpg" 
             alt="Gym Logo" 
             className="gym-logo"
+            style={{ borderRadius: '8px' }}
           />
           <h1 className="title">System <span>Admin</span></h1>
         </div>
