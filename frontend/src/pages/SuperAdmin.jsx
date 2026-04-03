@@ -19,7 +19,7 @@ const SuperAdmin = () => {
   const [insightLoading, setInsightLoading] = useState(false);
 
   const navigate = useNavigate();
-  const BASE_URL = 'https://gym-management-system-ngbu.onrender.com/api/superadmin';
+  const BASE_URL = 'http://localhost:5000/api/superadmin';
 
   useEffect(() => { fetchData(); }, []);
 
