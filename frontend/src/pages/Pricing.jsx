@@ -4,33 +4,34 @@ import { useNavigate } from 'react-router-dom';
 
 const Pricing = () => {
   const [loadingPlan, setLoadingPlan] = useState(null);
-  const [currentPlanOnDB, setCurrentPlanOnDB] = useState(''); // 🔥 DB ka asli plan save karne ke liye 🔥
+  const [currentPlanOnDB, setCurrentPlanOnDB] = useState(''); 
   const navigate = useNavigate();
 
-  // Make sure this is fetching the correct logged-in Gym's ID
-  const gymId = localStorage.getItem('gymId') || 'PLACEHOLDER_GYM_ID'; 
-  const BASE_URL = 'https://gym-management-system-ngbu.onrender.com/api/payment';
+  // 🔥 THE FIX: Get gymCode from localStorage instead of gymId
+  const gymCode = localStorage.getItem('gymCode'); 
+  const token = localStorage.getItem('token');
+  
+  // Local testing URL (Change to Render URL when deploying)
+  const BASE_URL = 'http://localhost:5000/api/payment';
 
   useEffect(() => {
-    // 1. Fetch the actual current plan from the server when page loads
     const fetchCurrentPlan = async () => {
-      if (gymId === 'PLACEHOLDER_GYM_ID') return;
+      if (!gymCode || !token) return;
       try {
-        // We can reuse the SuperAdmin's get insights endpoint, or create a simple /api/gym/me
-        // Assuming your backend has an endpoint like this. If not, this is critical.
-        const res = await axios.get(`https://gym-management-system-ngbu.onrender.com/api/superadmin/gyms/${gymId}/insights`);
+        // 🔥 THE FIX: Hitting the correct secure Admin endpoint instead of SuperAdmin
+        const res = await axios.get(`http://localhost:5000/api/admin/stats`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         
-        // This is based on the assumption your GET api now returns the plan name. 
-        // If not, Level 3 fix will handle it properly via req.user scoping.
-        if(res.data && res.data.gymPlan) {
-            setCurrentPlanOnDB(res.data.gymPlan); // Save the actual name e.g., 'Elite'
+        if(res.data && res.data.currentPlan) {
+            setCurrentPlanOnDB(res.data.currentPlan); 
         }
       } catch (error) {
-        console.error("Plan Fetch Error:", error);
+        console.error("Plan Fetch Error. Ensure you are logged in as Admin:", error);
       }
     };
     fetchCurrentPlan();
-  }, [gymId]);
+  }, [gymCode, token]);
 
   const loadRazorpay = () => {
     return new Promise((resolve) => {
@@ -43,8 +44,9 @@ const Pricing = () => {
   };
 
   const handleCheckout = async (planType, price) => {
-    if (gymId === 'PLACEHOLDER_GYM_ID') {
-      alert("Error: Gym ID not found. Please log in properly.");
+    if (!gymCode) {
+      alert("Error: Tenant Code not found. Please log in to your Admin Dashboard first.");
+      navigate('/');
       return;
     }
 
@@ -58,13 +60,11 @@ const Pricing = () => {
     }
 
     try {
-      // 1. Fetch Public Key dynamically from backend (No Hardcoding)
       const { data: { key } } = await axios.get(`${BASE_URL}/get-key`);
       
-      // 2. Create Order
-      const orderData = await axios.post(`${BASE_URL}/create-order`, { planType, gymId });
+      // 🔥 Sending gymCode instead of gymId
+      const orderData = await axios.post(`${BASE_URL}/create-order`, { planType, gymCode });
       
-      // 3. Initialize Razorpay Checkout
       const options = {
         key: key, 
         amount: orderData.data.amount,
@@ -74,26 +74,24 @@ const Pricing = () => {
         order_id: orderData.data.id,
         handler: async function (response) {
           try {
-            // Frontend Verification for instant UI update
             const verifyRes = await axios.post(`${BASE_URL}/verify`, {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
-              gymId: gymId,
+              gymCode: gymCode, // 🔥 Sending gymCode here too
               newPlan: planType
             });
 
             if (verifyRes.data.success) {
-              alert(`🎉 Payment Successful! Welcome to ${planType}.`);
-              // Reload page to reflect new plan status
-              window.location.reload();
+              alert(`🎉 Payment Successful! Welcome to the ${planType} Plan.`);
+              navigate('/admin'); // Redirect back to dashboard
             }
           } catch (err) {
             alert("Payment is processing in the background. It will reflect shortly.");
           }
         },
         prefill: {
-            name: localStorage.getItem('ownerName') || '', // Pre-fill if possible
+            name: localStorage.getItem('ownerName') || '', 
             contact: localStorage.getItem('phone') || ''
         },
         theme: { color: "#fbbf24" }
@@ -109,15 +107,13 @@ const Pricing = () => {
     }
   };
 
-  // 🔥 Helper function to render the correct button 🔥
   const renderActionButton = (planName) => {
-    // Check if this plan is the one currently saved in DB
     const isCurrentPlan = currentPlanOnDB === planName;
 
     if (isCurrentPlan) {
       return (
         <button disabled style={{ width: '100%', padding: '15px', backgroundColor: '#334155', color: '#94a3b8', border: 'none', borderRadius: '10px', marginTop: '20px', fontWeight: 'bold', cursor: 'not-allowed' }}>
-          Current Plan
+          Active Plan
         </button>
       );
     }
@@ -143,7 +139,11 @@ const Pricing = () => {
           <h2 style={{ color: '#94a3b8', marginTop: 0, fontSize: '1.4rem' }}>Starter</h2>
           <h1 style={{ fontSize: '3rem', margin: '15px 0', color: '#fff' }}>₹499<span style={{ fontSize: '1.1rem', color: '#64748b', fontWeight: 'normal' }}>/mo</span></h1>
           <ul style={{ listStyle: 'none', padding: 0, color: '#cbd5e1', lineHeight: '2.5', fontSize: '0.95rem' }}>
-            <li>✅ Up to 100 Members</li><li>✅ Basic Attendance</li><li>❌ Staff Portal</li><li>❌ Dietary Protocols</li>
+            <li>✅ Basic Dashboard Access</li>
+            <li>✅ Member Registration</li>
+            <li>✅ Manual Expiry Tracking</li>
+            <li>❌ Store / POS System</li>
+            <li>❌ WhatsApp Reminders</li>
           </ul>
           {renderActionButton('Starter')}
         </div>
@@ -153,7 +153,11 @@ const Pricing = () => {
           <h2 style={{ color: '#60a5fa', marginTop: 0, fontSize: '1.4rem' }}>Pro</h2>
           <h1 style={{ fontSize: '3rem', margin: '15px 0', color: '#fff' }}>₹999<span style={{ fontSize: '1.1rem', color: '#64748b', fontWeight: 'normal' }}>/mo</span></h1>
           <ul style={{ listStyle: 'none', padding: 0, color: '#cbd5e1', lineHeight: '2.5', fontSize: '0.95rem' }}>
-            <li>✅ Up to 500 Members</li><li>✅ Advanced QR Scanning</li><li>✅ 1 Staff Account</li><li>✅ Standard Diet Plans</li>
+            <li>✅ Everything in Starter</li>
+            <li>✅ Store & Inventory POS</li>
+            <li>✅ Diet & Workout Engine</li>
+            <li>✅ 1-Click WhatsApp Alerts</li>
+            <li>❌ Staff Login Portals</li>
           </ul>
           {renderActionButton('Pro')}
         </div>
@@ -163,7 +167,11 @@ const Pricing = () => {
           <h2 style={{ color: '#fbbf24', marginTop: 0, fontSize: '1.4rem' }}>Elite</h2>
           <h1 style={{ fontSize: '3rem', margin: '15px 0', color: '#fff' }}>₹1499<span style={{ fontSize: '1.1rem', color: '#64748b', fontWeight: 'normal' }}>/mo</span></h1>
           <ul style={{ listStyle: 'none', padding: 0, color: '#cbd5e1', lineHeight: '2.5', fontSize: '0.95rem' }}>
-            <li>✅ Unlimited Members</li><li>✅ Face/Biometric Sync</li><li>✅ Unlimited Staff Accounts</li><li>✅ Custom Nutrition & Workouts</li>
+            <li>✅ Everything in Pro</li>
+            <li>✅ QR Code Scanner Check-in</li>
+            <li>✅ Staff Accounts (Reception)</li>
+            <li>✅ Live Financial Ledger</li>
+            <li>✅ Premium Support</li>
           </ul>
           {renderActionButton('Elite')}
         </div>

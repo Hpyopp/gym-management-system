@@ -7,7 +7,6 @@ const Gym = require('../models/Gym');
 // ==========================================
 if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_SECRET) {
   console.error("FATAL ERROR: Razorpay keys are missing in .env file.");
-  // Production mein yahan process.exit(1) lagate hain, par server crash na ho isliye warning chhod raha hu
 }
 
 const razorpayInstance = new Razorpay({
@@ -16,11 +15,11 @@ const razorpayInstance = new Razorpay({
 });
 
 // ==========================================
-// 1. CREATE ORDER
+// 1. CREATE ORDER (FIXED: Using gymCode)
 // ==========================================
 const createOrder = async (req, res) => {
   try {
-    const { planType, gymId } = req.body;
+    const { planType, gymCode } = req.body; // 🔥 gymId hataya, gymCode lagaya
     let amount = 0;
 
     if (planType === 'Pro') amount = 999;
@@ -28,11 +27,15 @@ const createOrder = async (req, res) => {
     
     if (amount === 0) return res.status(400).json({ message: "Invalid Plan" });
 
+    // Find the actual Gym using gymCode
+    const gym = await Gym.findOne({ gymCode });
+    if (!gym) return res.status(404).json({ message: "Gym Tenant not found!" });
+
     const options = {
       amount: amount * 100, 
       currency: "INR",
-      receipt: `rcpt_${gymId}_${Math.floor(Math.random() * 1000)}`,
-      notes: { gymId, planType } 
+      receipt: `rcpt_${gym.gymCode}_${Math.floor(Math.random() * 1000)}`,
+      notes: { gymId: gym._id.toString(), planType, gymCode } 
     };
 
     const order = await razorpayInstance.orders.create(options);
@@ -44,13 +47,12 @@ const createOrder = async (req, res) => {
 };
 
 // ==========================================
-// 2. FRONTEND VERIFY (Instant UI Update)
+// 2. FRONTEND VERIFY (FIXED: Using gymCode)
 // ==========================================
 const verifyPayment = async (req, res) => {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, gymId, newPlan } = req.body;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, gymCode, newPlan } = req.body;
     
-    // Strict env usage
     const secret = process.env.RAZORPAY_SECRET;
     if (!secret) return res.status(500).json({ message: "Server Configuration Error" });
 
@@ -58,7 +60,8 @@ const verifyPayment = async (req, res) => {
     const expectedSignature = crypto.createHmac('sha256', secret).update(body.toString()).digest('hex');
 
     if (expectedSignature === razorpay_signature) {
-      const gym = await Gym.findById(gymId);
+      // Find gym by code and upgrade
+      const gym = await Gym.findOne({ gymCode });
       if (gym && gym.plan !== newPlan) {
         gym.plan = newPlan;
         await gym.save();
@@ -74,7 +77,7 @@ const verifyPayment = async (req, res) => {
 };
 
 // ==========================================
-// 3. SECURE WEBHOOK (Runs in background)
+// 3. SECURE WEBHOOK 
 // ==========================================
 const razorpayWebhook = async (req, res) => {
   try {
@@ -99,7 +102,6 @@ const razorpayWebhook = async (req, res) => {
         if (gym && gym.plan !== planType) {
           gym.plan = planType;
           await gym.save();
-          console.log(`✅ WEBHOOK SUCCESS: Gym ${gym.name} securely upgraded to ${planType}`);
         }
       }
     }
