@@ -13,8 +13,9 @@ const Login = () => {
     setLoading(true);
 
     try {
-      // 🔥 EXACT PAYLOAD BACKEND WANTS 🔥
-      const res = await axios.post('https://gym-management-system-ngbu.onrender.com/api/auth/login', {
+      // 🔥 EXACT PAYLOAD BACKEND WANTS (Local Testing URL) 🔥
+      // Jab live karna ho, tab isko wapas Render wale URL se replace kar dena
+      const res = await axios.post('http://localhost:5000/api/auth/login', {
         email: identifier, 
         password: password
       });
@@ -27,16 +28,23 @@ const Login = () => {
 
       alert("✅ Login Successful! Welcome to Command Center.");
 
-      // Role-based Redirect
-      if (res.data.user.role === 'admin') {
-        navigate('/admin'); // Admin goes to Dashboard
+      // 🔥 THE 404 FIX: Exact routing matching your App.jsx 🔥
+      const userRole = res.data.user.role;
+      
+      if (userRole === 'superadmin') {
+        navigate('/superadmin');
+      } else if (userRole === 'admin') {
+        navigate('/admin'); 
+      } else if (userRole === 'staff') {
+        navigate('/staff-dashboard');
       } else {
-        navigate('/member'); // Member goes to their app
+        // Normal user goes to their dynamic dashboard
+        navigate(`/dashboard/${res.data.user.id}`); 
       }
 
     } catch (error) {
       // 🔥 THE LIFESAVER: Puts the exact backend error on screen 🔥
-      const errorMsg = error.response?.data?.message || "Server Unreachable. Is Render awake?";
+      const errorMsg = error.response?.data?.message || "Server Unreachable. Is local backend running on port 5000?";
       alert(`❌ ERROR: ${errorMsg}`);
     } finally {
       setLoading(false);
