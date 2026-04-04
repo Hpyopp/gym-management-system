@@ -1,6 +1,5 @@
 const Gym = require('../models/Gym');
 const User = require('../models/User');
-const bcrypt = require('bcryptjs'); // 🔥 PASSWORD SECURITY 🔥
 
 // 1. ENTERPRISE ENGINE: Real MRR Calculation
 const getAllGyms = async (req, res) => {
@@ -65,11 +64,10 @@ const toggleGymStatus = async (req, res) => {
 };
 
 // ==========================================
-// 🚨 3. PROVISION TENANT (100% FIXED LOGIC) 🚨
+// 🚨 3. PROVISION TENANT (DOUBLE-HASHING BUG FIXED) 🚨
 // ==========================================
 const createGym = async (req, res) => {
   try {
-    // 🔥 Ab Modal se Email aur Password bhi aayega 🔥
     const { name, gymCode, ownerName, phone, plan, email, password } = req.body;
     
     // Check if Gym Code already exists
@@ -82,20 +80,18 @@ const createGym = async (req, res) => {
 
     if(!email || !password) return res.status(400).json({ message: "Admin Email and Password are required!" });
 
-    // Hash the password securely before saving
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    // 🔥 THE FIX: Manual hashing removed. We send plain text, and User.js handles it safely! 🔥
 
     // Step A: Create the Gym Tenant
     const newGym = await Gym.create({
       name, gymCode, ownerName, phone, plan: plan || 'Starter', isActive: true
     });
 
-    // Step B: Create the Admin User Account so they can actually Login!
+    // Step B: Create the Admin User Account
     await User.create({
       name: ownerName,
       email: email,
-      password: hashedPassword,
+      password: password, // 🔥 NORMAL PASSWORD PASS KIYA HAI 🔥
       role: 'admin',      // 🔥 They get Admin rights 🔥
       gymCode: gymCode,   // Tied strictly to their new Gym
       phone: phone
