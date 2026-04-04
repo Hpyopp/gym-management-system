@@ -5,8 +5,9 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  role: { type: String, enum: ['user', 'admin', 'superadmin'], default: 'user' },
+  role: { type: String, enum: ['user', 'admin', 'staff', 'superadmin'], default: 'user' },
   gymId: { type: mongoose.Schema.Types.ObjectId, ref: 'Gym' },
+  gymCode: { type: String }, // 🔥 YEH MISSING THA! Iske bina system andha hai 🔥
   phone: { type: String },
   
   currentWeight: { type: Number },
@@ -16,8 +17,6 @@ const userSchema = new mongoose.Schema({
   expiryDate: { type: Date },
   
   isActive: { type: Boolean, default: true },
-  
-  // 🔥 THE FIX: VIRTUAL WALLET ADDED
   walletBalance: { type: Number, default: 0 },
   
   notifications: [{ message: String, type: { type: String }, date: { type: Date, default: Date.now } }]
