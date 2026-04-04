@@ -14,7 +14,7 @@ const Login = () => {
 
     try {
       // 🔥 EXACT PAYLOAD BACKEND WANTS 🔥
-      const res = await axios.post('http://localhost:5000/api/auth/login', {
+      const res = await axios.post('https://gym-management-system-ngbu.onrender.com/api/auth/login', {
         email: identifier, 
         password: password
       });
