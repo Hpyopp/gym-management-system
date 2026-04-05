@@ -10,9 +10,11 @@ const storeRoutes = require('./routes/storeRoutes');
 const staffRoutes = require('./routes/staffRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes');
 
-
-// Routes Import (Make sure path is correct based on your folder structure)
+// Routes Import
 const superAdminRoutes = require('./routes/superAdminRoutes'); 
+
+// 🔥 THE FIX: TERA CRON ENGINE YAHAN SE ZINDA HOGA 🔥
+require('./utils/cronJobs'); 
 
 const app = express();
 
@@ -71,7 +73,7 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/payment', require('./routes/paymentRoutes'));
 app.use('/api/plans', planRoutes);
-app.use('/api/admin', storeRoutes);
+app.use('/api/admin', storeRoutes); // ⚠️ Note: Tu admin route pe storeRoutes map kar raha hai, check kar lena yeh intentional hai ya nahi.
 app.use('/api/staff', staffRoutes);
 app.use('/api/attendance', attendanceRoutes);
 
