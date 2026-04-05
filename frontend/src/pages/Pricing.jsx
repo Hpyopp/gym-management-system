@@ -18,7 +18,7 @@ const Pricing = () => {
       if (!gymCode || !token) return;
       try {
         // 🔥 THE FIX: Hitting the Live Render Admin endpoint
-        const res = await axios.get(`https://gym-management-system-ngbu.onrender.com/api/admin/stats`, {
+        const res = await axios.get(`https://gym-management-system-ngbu.onrender.com/api/admin/members`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
