@@ -13,9 +13,8 @@ const Login = () => {
     setLoading(true);
 
     try {
-      // 🔥 EXACT PAYLOAD BACKEND WANTS (Local Testing URL) 🔥
-      // Jab live karna ho, tab isko wapas Render wale URL se replace kar dena
-      const res = await axios.post('http://localhost:5000/api/auth/login', {
+      // 🔥 THE FIX: Live Render URL 🔥
+      const res = await axios.post('https://gym-management-system-ngbu.onrender.com/api/auth/login', {
         email: identifier, 
         password: password
       });
@@ -28,7 +27,6 @@ const Login = () => {
 
       alert("✅ Login Successful! Welcome to Command Center.");
 
-      // 🔥 THE 404 FIX: Exact routing matching your App.jsx 🔥
       const userRole = res.data.user.role;
       
       if (userRole === 'superadmin') {
@@ -38,13 +36,12 @@ const Login = () => {
       } else if (userRole === 'staff') {
         navigate('/staff-dashboard');
       } else {
-        // Normal user goes to their dynamic dashboard
         navigate(`/dashboard/${res.data.user.id}`); 
       }
 
     } catch (error) {
-      // 🔥 THE LIFESAVER: Puts the exact backend error on screen 🔥
-      const errorMsg = error.response?.data?.message || "Server Unreachable. Is local backend running on port 5000?";
+      // 🔥 Error message updated for Live environment 🔥
+      const errorMsg = error.response?.data?.message || "Server Unreachable. Is Render awake? (Wait 50 secs)";
       alert(`❌ ERROR: ${errorMsg}`);
     } finally {
       setLoading(false);

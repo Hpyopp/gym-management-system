@@ -7,19 +7,18 @@ const Pricing = () => {
   const [currentPlanOnDB, setCurrentPlanOnDB] = useState(''); 
   const navigate = useNavigate();
 
-  // 🔥 THE FIX: Get gymCode from localStorage instead of gymId
   const gymCode = localStorage.getItem('gymCode'); 
   const token = localStorage.getItem('token');
   
-  // Local testing URL (Change to Render URL when deploying)
-  const BASE_URL = 'http://localhost:5000/api/payment';
+  // 🔥 THE FIX: Live Render URL 
+  const BASE_URL = 'https://gym-management-system-ngbu.onrender.com/api/payment';
 
   useEffect(() => {
     const fetchCurrentPlan = async () => {
       if (!gymCode || !token) return;
       try {
-        // 🔥 THE FIX: Hitting the correct secure Admin endpoint instead of SuperAdmin
-        const res = await axios.get(`http://localhost:5000/api/admin/stats`, {
+        // 🔥 THE FIX: Hitting the Live Render Admin endpoint
+        const res = await axios.get(`https://gym-management-system-ngbu.onrender.com/api/admin/stats`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -62,7 +61,6 @@ const Pricing = () => {
     try {
       const { data: { key } } = await axios.get(`${BASE_URL}/get-key`);
       
-      // 🔥 Sending gymCode instead of gymId
       const orderData = await axios.post(`${BASE_URL}/create-order`, { planType, gymCode });
       
       const options = {
@@ -78,13 +76,13 @@ const Pricing = () => {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
-              gymCode: gymCode, // 🔥 Sending gymCode here too
+              gymCode: gymCode,
               newPlan: planType
             });
 
             if (verifyRes.data.success) {
               alert(`🎉 Payment Successful! Welcome to the ${planType} Plan.`);
-              navigate('/admin'); // Redirect back to dashboard
+              navigate('/admin'); 
             }
           } catch (err) {
             alert("Payment is processing in the background. It will reflect shortly.");
@@ -133,7 +131,6 @@ const Pricing = () => {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'center', gap: '30px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-        
         {/* STARTER */}
         <div style={{ backgroundColor: '#1e293b', padding: '40px', borderRadius: '20px', width: '300px', border: '1px solid #334155' }}>
           <h2 style={{ color: '#94a3b8', marginTop: 0, fontSize: '1.4rem' }}>Starter</h2>
@@ -175,7 +172,6 @@ const Pricing = () => {
           </ul>
           {renderActionButton('Elite')}
         </div>
-
       </div>
     </div>
   );
