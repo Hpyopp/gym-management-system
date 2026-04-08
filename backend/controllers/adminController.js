@@ -1,157 +1,147 @@
-const User = require('../models/User');
 const Gym = require('../models/Gym');
-const jwt = require('jsonwebtoken'); 
+const User = require('../models/User');
 
-// 🔥 MASTER FIX: Extract exact gymCode from Token for Multi-Tenant Security
-const getTokenData = (req) => {
-  const token = req.cookies?.token || req.headers?.authorization?.split(' ')[1];
-  if (!token) throw new Error('Unauthorized: Token missing');
-  return jwt.verify(token, process.env.JWT_SECRET);
-};
-
-// 1. Dashboard Stats (FIXED PLAN & ISOLATED GRAPH DATA 🔥)
-const getAdminStats = async (req, res) => {
+// 1. ENTERPRISE ENGINE: Real MRR Calculation
+const getAllGyms = async (req, res) => {
   try {
-    const decoded = getTokenData(req);
-    const adminGymCode = decoded.gymCode; // 🔥 Using gymCode to strictly isolate data
+    const gyms = await Gym.find().sort({ createdAt: -1 });
+    let totalMRR = 0;
+    let activeGyms = 0;
 
-    const totalMembers = await User.countDocuments({ gymCode: adminGymCode, role: 'user' });
-    const currentDate = new Date();
-    const activeMembers = await User.countDocuments({ gymCode: adminGymCode, role: 'user', expiryDate: { $gte: currentDate } });
-    const expiredMembers = await User.countDocuments({ gymCode: adminGymCode, role: 'user', expiryDate: { $lt: currentDate } });
+    const enrichedGyms = gyms.map(gym => {
+      let planPrice = 0;
+      const currentPlan = gym.plan || 'Starter';
 
-    // 🔥 THE PLAN FIX: Fetch actual plan assigned by SuperAdmin from the Gym model
-    let currentPlan = 'Free Trial';
-    const gym = await Gym.findOne({ gymCode: adminGymCode });
-    if (gym && gym.plan) {
-      currentPlan = gym.plan; // Yahan se aayega tera Pro ya Elite!
-    }
+      if (currentPlan === 'Starter') planPrice = 499;
+      if (currentPlan === 'Pro') planPrice = 999;
+      if (currentPlan === 'Elite') planPrice = 1499;
 
-    // 🔥 GRAPH DATA ENGINE (Strictly filtered by gymCode)
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const chartData = [];
-    
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - i);
-      const monthLabel = monthNames[d.getMonth()];
-      
-      const startOfMonth = new Date(d.getFullYear(), d.getMonth(), 1);
-      const endOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+      if (gym.isActive) {
+        totalMRR += planPrice;
+        activeGyms += 1;
+      }
 
-      const joins = await User.countDocuments({
-        gymCode: adminGymCode, // Only count members of THIS specific gym
-        role: 'user',
-        createdAt: { $gte: startOfMonth, $lt: endOfMonth }
-      });
-
-      chartData.push({ name: monthLabel, joins });
-    }
-
-    res.status(200).json({ 
-      totalMembers, 
-      activeMembers, 
-      expiredMembers, 
-      currentPlan,
-      chartData 
-    });
-  } catch (error) {
-    console.error("Dashboard Stats Error:", error);
-    res.status(500).json({ message: "Server Error fetching stats", error: error.message });
-  }
-};
-
-// 2. Member List Data (ISOLATED)
-const getAdminMembers = async (req, res) => {
-  try {
-    const decoded = getTokenData(req);
-    // 🔥 Cross-Tenant Leak Fixed: Ab sirf ussi gym ke members dikhenge
-    const members = await User.find({ gymCode: decoded.gymCode, role: 'user' }).select('-password').sort({ createdAt: -1 });
-    res.status(200).json(members);
-  } catch (error) {
-    res.status(500).json({ message: "Failed to fetch members" });
-  }
-};
-
-// 3. Add Member
-const addMember = async (req, res) => {
-  try {
-    const decoded = getTokenData(req);
-    const { name, phone, age, weight, planDuration } = req.body;
-
-    const existingUser = await User.findOne({ phone });
-    if (existingUser) return res.status(400).json({ message: "Phone number already exists in system!" });
-
-    let monthsToAdd = 1;
-    if (typeof planDuration === 'string') monthsToAdd = parseInt(planDuration.split(' ')[0]) || 1;
-    
-    const expiryDate = new Date();
-    expiryDate.setMonth(expiryDate.getMonth() + monthsToAdd);
-
-    const dummyEmail = `${phone}@member.com`;
-    const defaultPassword = phone; 
-
-    const newMember = await User.create({
-      name, phone, email: dummyEmail, password: defaultPassword, 
-      age, currentWeight: weight, role: 'user', 
-      gymCode: decoded.gymCode, // 🔥 Correctly linking the member to the Gym's Code
-      expiryDate, isActive: true, walletBalance: 0
+      return { ...gym._doc, plan: currentPlan, planPrice };
     });
 
-    res.status(201).json({ success: true, message: "Member added successfully!", member: newMember });
+    const totalGyms = gyms.length;
+    const suspendedGyms = totalGyms - activeGyms;
+
+    const chartData = [
+      { name: 'Nov', revenue: Math.round(totalMRR * 0.3) },
+      { name: 'Dec', revenue: Math.round(totalMRR * 0.5) },
+      { name: 'Jan', revenue: Math.round(totalMRR * 0.65) },
+      { name: 'Feb', revenue: Math.round(totalMRR * 0.8) },
+      { name: 'Mar', revenue: Math.round(totalMRR * 0.9) },
+      { name: 'Apr', revenue: totalMRR },
+    ];
+
+    res.status(200).json({
+      stats: { totalGyms, activeGyms, suspendedGyms, totalMRR },
+      chartData,
+      gyms: enrichedGyms
+    });
   } catch (error) {
-    res.status(500).json({ message: "Failed to add member" });
+    console.error("Fetch Gyms Error:", error);
+    res.status(500).json({ message: "Failed to fetch enterprise data" });
   }
 };
 
-// 4. Update Member
-const updateMember = async (req, res) => {
+// 2. THE KILL SWITCH: Toggle Gym Status
+const toggleGymStatus = async (req, res) => {
   try {
-    const decoded = getTokenData(req);
-    const { id } = req.params;
-    const updatedUser = await User.findOneAndUpdate({ _id: id, gymCode: decoded.gymCode, role: 'user' }, req.body, { new: true });
-    if (!updatedUser) return res.status(404).json({ message: "Member not found" });
-    res.status(200).json({ success: true, message: "Member updated!" });
+    const gym = await Gym.findById(req.params.id);
+    if (!gym) return res.status(404).json({ message: "Gym not found" });
+
+    gym.isActive = !gym.isActive; 
+    await gym.save();
+
+    res.status(200).json({ success: true, message: `Gym access ${gym.isActive ? 'RESTORED' : 'SUSPENDED'} successfully!`, gym });
   } catch (error) {
-    res.status(500).json({ message: "Failed to update member" });
+    console.error("Toggle Status Error:", error);
+    res.status(500).json({ message: "Server error while toggling gym status" });
   }
 };
 
-// 5. Delete Member
-const deleteMember = async (req, res) => {
+// ==========================================
+// 🚨 3. PROVISION TENANT
+// ==========================================
+const createGym = async (req, res) => {
   try {
-    const decoded = getTokenData(req);
-    const { id } = req.params;
-    const deletedUser = await User.findOneAndDelete({ _id: id, gymCode: decoded.gymCode, role: 'user' });
-    if (!deletedUser) return res.status(404).json({ message: "Member not found" });
-    res.status(200).json({ success: true, message: "Member deleted successfully!" });
+    const { name, gymCode, ownerName, phone, plan, email, password } = req.body;
+    
+    // Check if Gym Code already exists
+    const existingGym = await Gym.findOne({ gymCode });
+    if (existingGym) return res.status(400).json({ message: "This Gym Code is already taken!" });
+
+    // Check if Email already exists for any user
+    const existingUser = await User.findOne({ email });
+    if (existingUser) return res.status(400).json({ message: "This Email is already registered!" });
+
+    if(!email || !password) return res.status(400).json({ message: "Admin Email and Password are required!" });
+
+    // Step A: Create the Gym Tenant
+    const newGym = await Gym.create({
+      name, gymCode, ownerName, phone, plan: plan || 'Starter', isActive: true
+    });
+
+    // Step B: Create the Admin User Account
+    await User.create({
+      name: ownerName,
+      email: email,
+      password: password, 
+      role: 'admin',      
+      gymCode: gymCode,   
+      phone: phone
+    });
+
+    res.status(201).json({ success: true, message: "Gym Created & Admin Credentials Generated!" });
   } catch (error) {
-    res.status(500).json({ message: "Failed to delete member" });
+    console.error("Create Gym Error:", error);
+    res.status(500).json({ message: "Failed to create new gym" });
   }
 };
 
-// 6. Update Wallet
-const updateWallet = async (req, res) => {
+// 4. SPY MODE: Deep Insights (ROLE MISMATCH FIXED 🔥)
+const getGymInsights = async (req, res) => {
   try {
-    const decoded = getTokenData(req);
-    const { id } = req.params;
-    const { amount, actionType } = req.body; 
+    const gym = await Gym.findById(req.params.id);
+    if (!gym) return res.status(404).json({ message: "Gym not found" });
 
-    const user = await User.findOne({ _id: id, gymCode: decoded.gymCode, role: 'user' });
-    if (!user) return res.status(404).json({ message: "Member not found" });
+    // 🔥 THE FIX: Changed 'member' to 'user' to match Admin's data entry
+    const memberCount = await User.countDocuments({ role: 'user', gymCode: gym.gymCode }); 
+    const staffCount = await User.countDocuments({ role: 'staff', gymCode: gym.gymCode });   
+    const simulatedEarnings = memberCount * 1500; 
 
-    const value = parseFloat(amount);
-    if (isNaN(value) || value <= 0) return res.status(400).json({ message: "Invalid amount" });
-
-    if (actionType === 'add') user.walletBalance += value;
-    else if (actionType === 'deduct') user.walletBalance -= value;
-    else return res.status(400).json({ message: "Invalid action type" });
-
-    await user.save();
-    res.status(200).json({ success: true, message: "Wallet updated successfully!", balance: user.walletBalance });
+    res.status(200).json({
+      success: true,
+      gymName: gym.name || 'Unnamed Gym',
+      insights: { totalMembers: memberCount || 0, totalStaff: staffCount || 0, gymRevenue: simulatedEarnings || 0 }
+    });
   } catch (error) {
-    res.status(500).json({ message: "Failed to update wallet" });
+    console.error("Insights Error:", error);
+    res.status(500).json({ message: "Failed to fetch gym insights" });
   }
 };
 
-module.exports = { getAdminStats, getAdminMembers, addMember, updateMember, deleteMember, updateWallet };
+// 5. UPDATE TENANT PLAN
+const updateGymPlan = async (req, res) => {
+  try {
+    const { plan } = req.body;
+    const validPlans = ['Starter', 'Pro', 'Elite'];
+    if (!validPlans.includes(plan)) return res.status(400).json({ message: "Invalid plan selected" });
+
+    const gym = await Gym.findById(req.params.id);
+    if (!gym) return res.status(404).json({ message: "Gym not found" });
+
+    gym.plan = plan;
+    await gym.save();
+
+    res.status(200).json({ success: true, message: `Plan updated to ${plan}` });
+  } catch (error) {
+    console.error("Update Plan Error:", error);
+    res.status(500).json({ message: "Failed to update plan" });
+  }
+};
+
+module.exports = { getAllGyms, toggleGymStatus, createGym, getGymInsights, updateGymPlan };
