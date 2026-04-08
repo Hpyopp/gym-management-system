@@ -2,31 +2,32 @@ const User = require('../models/User');
 const Gym = require('../models/Gym');
 const jwt = require('jsonwebtoken'); 
 
-// 🔥 Extract exact gymCode from Token for Multi-Tenant Security
+// 🔥 MASTER FIX: Extract exact gymCode from Token for Multi-Tenant Security
 const getTokenData = (req) => {
   const token = req.cookies?.token || req.headers?.authorization?.split(' ')[1];
   if (!token) throw new Error('Unauthorized: Token missing');
   return jwt.verify(token, process.env.JWT_SECRET);
 };
 
-// 1. Dashboard Stats 
+// 1. Dashboard Stats (FIXED PLAN & ISOLATED GRAPH DATA 🔥)
 const getAdminStats = async (req, res) => {
   try {
     const decoded = getTokenData(req);
-    const adminGymCode = decoded.gymCode; 
+    const adminGymCode = decoded.gymCode; // 🔥 Using gymCode to strictly isolate data
 
     const totalMembers = await User.countDocuments({ gymCode: adminGymCode, role: 'user' });
     const currentDate = new Date();
     const activeMembers = await User.countDocuments({ gymCode: adminGymCode, role: 'user', expiryDate: { $gte: currentDate } });
     const expiredMembers = await User.countDocuments({ gymCode: adminGymCode, role: 'user', expiryDate: { $lt: currentDate } });
 
+    // 🔥 THE PLAN FIX: Fetch actual plan assigned by SuperAdmin from the Gym model
     let currentPlan = 'Free Trial';
     const gym = await Gym.findOne({ gymCode: adminGymCode });
     if (gym && gym.plan) {
-      currentPlan = gym.plan; 
+      currentPlan = gym.plan; // Yahan se aayega tera Pro ya Elite!
     }
 
-    // GRAPH DATA ENGINE 
+    // 🔥 GRAPH DATA ENGINE (Strictly filtered by gymCode)
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const chartData = [];
     
@@ -39,7 +40,7 @@ const getAdminStats = async (req, res) => {
       const endOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 1);
 
       const joins = await User.countDocuments({
-        gymCode: adminGymCode, 
+        gymCode: adminGymCode, // Only count members of THIS specific gym
         role: 'user',
         createdAt: { $gte: startOfMonth, $lt: endOfMonth }
       });
@@ -60,10 +61,11 @@ const getAdminStats = async (req, res) => {
   }
 };
 
-// 2. Member List Data
+// 2. Member List Data (ISOLATED)
 const getAdminMembers = async (req, res) => {
   try {
     const decoded = getTokenData(req);
+    // 🔥 Cross-Tenant Leak Fixed: Ab sirf ussi gym ke members dikhenge
     const members = await User.find({ gymCode: decoded.gymCode, role: 'user' }).select('-password').sort({ createdAt: -1 });
     res.status(200).json(members);
   } catch (error) {
@@ -92,7 +94,7 @@ const addMember = async (req, res) => {
     const newMember = await User.create({
       name, phone, email: dummyEmail, password: defaultPassword, 
       age, currentWeight: weight, role: 'user', 
-      gymCode: decoded.gymCode, 
+      gymCode: decoded.gymCode, // 🔥 Correctly linking the member to the Gym's Code
       expiryDate, isActive: true, walletBalance: 0
     });
 
